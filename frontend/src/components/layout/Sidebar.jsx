@@ -10,7 +10,7 @@ import {
 import { NavLink } from "react-router-dom";
 
 const menuItems = [
-  { label: "Dashboard", icon: <FiHome />, path: "/" },
+  { label: "Dashboard", icon: <FiHome />, path: "/dashboard" },
   { label: "Upload Contract", icon: <FiUpload />, path: "/upload" },
   { label: "My Contracts", icon: <FiFileText />, path: "/contracts" },
   { label: "AI Chat", icon: <FiMessageSquare />, path: "/chat" },
