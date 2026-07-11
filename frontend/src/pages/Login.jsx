@@ -1,10 +1,31 @@
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { FaGoogle, FaEye, FaEyeSlash } from "react-icons/fa";
 import { useState } from "react";
 import { supabase } from "../supabase/supabaseClient";
+import { useAuthContext } from "../context/AuthContext";
 
 export default function Login() {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+  const { signIn } = useAuthContext();
+  const navigate = useNavigate();
+
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    setError("");
+    setLoading(true);
+    try {
+      await signIn({ email, password });
+      navigate("/dashboard");
+    } catch (err) {
+      setError(err.message || "Invalid email or password");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleGoogleLogin = async () => {
     const { error } = await supabase.auth.signInWithOAuth({
@@ -13,9 +34,8 @@ export default function Login() {
         redirectTo: "http://localhost:3000/dashboard",
       },
     });
-
     if (error) {
-      console.log(error.message);
+      setError(error.message);
     }
   };
 
@@ -32,7 +52,13 @@ export default function Login() {
           Understand every contract with AI
         </p>
 
-        <div className="space-y-5">
+        {error && (
+          <div className="mb-4 p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-sm text-center">
+            {error}
+          </div>
+        )}
+
+        <form onSubmit={handleLogin} className="space-y-5">
 
           <div>
             <label className="text-slate-300 text-sm">
@@ -42,6 +68,9 @@ export default function Login() {
             <input
               type="email"
               placeholder="Enter your email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
               className="w-full mt-2 p-3 rounded-xl bg-[#222C40] text-white outline-none border border-slate-700 focus:border-blue-500"
             />
           </div>
@@ -56,6 +85,9 @@ export default function Login() {
               <input
                 type={showPassword ? "text" : "password"}
                 placeholder="Enter your password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
                 className="w-full p-3 rounded-xl bg-[#222C40] text-white outline-none border border-slate-700 focus:border-blue-500"
               />
 
@@ -86,8 +118,12 @@ export default function Login() {
 
           </div>
 
-          <button className="w-full bg-blue-600 hover:bg-blue-700 py-3 rounded-xl font-semibold text-white transition">
-            Login
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full bg-blue-600 hover:bg-blue-700 py-3 rounded-xl font-semibold text-white transition disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {loading ? "Logging in..." : "Login"}
           </button>
 
           <div className="flex items-center gap-3">
@@ -103,6 +139,7 @@ export default function Login() {
           </div>
 
           <button
+            type="button"
             onClick={handleGoogleLogin}
             className="w-full border border-slate-700 py-3 rounded-xl flex justify-center items-center gap-3 hover:bg-slate-800 transition text-white"
           >
@@ -123,7 +160,7 @@ export default function Login() {
 
           </p>
 
-        </div>
+        </form>
 
       </div>
 
