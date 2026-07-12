@@ -1,12 +1,15 @@
 import { useRef, useState } from "react";
 import { FiUploadCloud } from "react-icons/fi";
 import { useNavigate } from "react-router-dom";
+import { useAuthContext } from "../../context/AuthContext";
+import { uploadContract } from "../../services/contractService";
 import FilePreview from "./FilePreview";
 import UploadProgress from "./UploadProgress";
 
 const UploadDropZone = () => {
   const fileInputRef = useRef(null);
   const navigate = useNavigate();
+  const { user } = useAuthContext();
 
   const [step, setStep] = useState("idle");
   const [selectedFile, setSelectedFile] = useState(null);
@@ -39,30 +42,25 @@ const UploadDropZone = () => {
     fileInputRef.current.value = "";
   };
 
-  const startUpload = () => {
-    setStep("uploading");
-    setProgress(0);
-    setStatus("Uploading...");
+  const startUpload = async () => {
+    try {
+      setStep("uploading");
+      setProgress(20);
+      setStatus("Uploading PDF...");
 
-    let value = 0;
+      await uploadContract(selectedFile, user.id);
 
-    const interval = setInterval(() => {
-      value += 5;
+      setProgress(100);
+      setStatus("Upload Completed");
 
-      if (value >= 100) value = 100;
-
-      setProgress(value);
-
-      if (value >= 25) setStatus("Extracting Text...");
-      if (value >= 50) setStatus("Reading Clauses...");
-      if (value >= 75) setStatus("Calculating Risk...");
-
-      if (value >= 100) {
-        setStatus("Generating Report...");
-        clearInterval(interval);
-        setTimeout(() => navigate("/analysis"), 500);
-      }
-    }, 200);
+      setTimeout(() => {
+        navigate("/analysis");
+      }, 700);
+    } catch (err) {
+      console.error(err);
+      alert(err.message);
+      setStep("selected");
+    }
   };
 
   return (

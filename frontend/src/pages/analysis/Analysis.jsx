@@ -9,9 +9,11 @@ import RiskyClauses from "../../components/analysis/RiskyClauses";
 import SafeClauses from "../../components/analysis/SafeClauses";
 import QuestionsSection from "../../components/analysis/QuestionsSection";
 import InsightsPanel from "../../components/analysis/InsightsPanel";
+import WaitingAnalysis from "../../components/analysis/WaitingAnalysis";
 
 const Analysis = () => {
   const [activeSection, setActiveSection] = useState("summary");
+  const [status] = useState("waiting");
   return (
     <MainLayout>
       <div className="max-w-7xl mx-auto">
@@ -22,28 +24,34 @@ const Analysis = () => {
         </p>
 
         <div className="mt-8">
-          <AnalysisHeader />
+          {status === "waiting" ? (
+            <WaitingAnalysis />
+          ) : (
+            <>
+              <AnalysisHeader />
 
-          <OverviewCards onSelect={setActiveSection} />
+              <OverviewCards onSelect={setActiveSection} />
 
-          <div className="grid grid-cols-2 gap-6 mt-6">
+              <div className="grid grid-cols-2 gap-6 mt-6">
+                {activeSection === "summary" && <AiSummary />}
 
-            {activeSection === "summary" && <AiSummary />}
+                {activeSection === "risk" && <OverallRisk />}
 
-            {activeSection === "risk" && <OverallRisk />}
+                {activeSection === "clauses" && <TotalClauses />}
 
-            {activeSection === "clauses" && <TotalClauses />}
+                {activeSection === "risky" && <RiskyClauses />}
 
-            {activeSection === "risky" && <RiskyClauses />}
+                {activeSection === "safe" && <SafeClauses />}
 
-            {activeSection === "safe" && <SafeClauses />}
+                {activeSection === "questions" && <QuestionsSection />}
 
-            {activeSection === "questions" && <QuestionsSection />}
-
-            <InsightsPanel activeSection={activeSection} onSelect={setActiveSection} />
-
-          </div>
-
+                <InsightsPanel
+                  activeSection={activeSection}
+                  onSelect={setActiveSection}
+                />
+              </div>
+            </>
+          )}
         </div>
       </div>
     </MainLayout>

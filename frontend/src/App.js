@@ -6,7 +6,7 @@ import Dashboard from "./pages/dashboard/Dashboard";
 import Upload from "./pages/upload/Upload";
 import Analysis from "./pages/analysis/Analysis";
 import AIChat from "./pages/chat/AIChat";
-import MyContracts from "./pages/contracts/MyContracts";
+import Contracts from "./pages/contracts/Contracts";
 import History from "./pages/history/History";
 import Reports from "./pages/reports/Reports";
 import Profile from "./pages/profile/Profile";
@@ -62,7 +62,7 @@ function App() {
             path="/contracts"
             element={
               <ProtectedRoute>
-                <MyContracts />
+                <Contracts />
               </ProtectedRoute>
             }
           />
