@@ -1,11 +1,17 @@
 import MainLayout from "../../components/layout/MainLayout";
+import HistoryList from "../../components/history/HistoryList";
 
 const History = () => {
   return (
     <MainLayout>
-      <div className="max-w-6xl mx-auto py-12">
-        <h1 className="text-4xl font-bold text-white">History</h1>
-        <p className="text-slate-400 mt-3">Coming Soon...</p>
+      <div className="max-w-7xl mx-auto">
+        <h1 className="text-4xl font-bold">History</h1>
+
+        <p className="text-slate-400 mt-2 mb-8">
+          View all your previously analyzed contracts.
+        </p>
+
+        <HistoryList />
       </div>
     </MainLayout>
   );
