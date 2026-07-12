@@ -1,72 +1,103 @@
-import os
-from fastapi import APIRouter, HTTPException
-from fastapi.responses import FileResponse
+from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import Response
 from models.schemas import AnalysisRequest
-from config import UPLOAD_DIR, REPORT_DIR
-from services.ocr import extract_text_from_pdf
-from services.classifier import classify_document
-from services.clause_extractor import extract_clauses
-from services.analyzer import analyze_clause, generate_summary, generate_questions
-from services.risk_scorer import calculate_risk_score, identify_risk_factors
+from services.auth import get_current_user
+from services.supabase_client import supabase
 from services.report_gen import generate_pdf_report
+from services.logger import get_logger
+
+logger = get_logger("routes.report")
 
 router = APIRouter()
 
+
 @router.post("/api/report")
-async def download_report(request: AnalysisRequest):
-    file_path = None
-    for f in os.listdir(UPLOAD_DIR):
-        if f.startswith(request.document_id):
-            file_path = os.path.join(UPLOAD_DIR, f)
-            break
+async def download_report(
+    request: AnalysisRequest,
+    user_id: str = Depends(get_current_user),
+):
+    contract = (
+        supabase.table("contracts")
+        .select("*")
+        .eq("id", request.contract_id)
+        .eq("user_id", user_id)
+        .single()
+        .execute()
+    )
 
-    if not file_path or not os.path.exists(file_path):
-        raise HTTPException(status_code=404, detail="Document not found")
+    if not contract.data:
+        raise HTTPException(status_code=404, detail="Contract not found")
 
-    try:
-        text = extract_text_from_pdf(file_path)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to read document: {str(e)}")
+    contract_data = contract.data
 
-    document_type = classify_document(text)
-    raw_clauses = extract_clauses(text)
-    if not raw_clauses:
-        raw_clauses = [{"title": "General", "context": text[:1000]}]
+    analysis = (
+        supabase.table("analyses")
+        .select("*")
+        .eq("contract_id", request.contract_id)
+        .eq("status", "completed")
+        .order("created_at", desc=True)
+        .limit(1)
+        .execute()
+    )
 
-    analyzed_clauses = []
-    for clause in raw_clauses:
-        result = analyze_clause(clause["title"], clause["context"], document_type)
-        analyzed_clauses.append({
-            "title": clause["title"],
-            "original_text": clause["context"],
-            "simple_explanation": result["simple_explanation"],
-            "risk_level": result["risk_level"],
-            "risk_reason": result["risk_reason"]
-        })
+    if not analysis.data:
+        raise HTTPException(status_code=404, detail="No analysis found. Run analysis first.")
 
-    summary = generate_summary(document_type, analyzed_clauses)
-    risk_score = calculate_risk_score(analyzed_clauses)
-    risk_factors = identify_risk_factors(analyzed_clauses, text)
-    questions = generate_questions(document_type, analyzed_clauses)
+    analysis_data = analysis.data[0]
+    analysis_id = analysis_data["id"]
 
-    analysis = {
-        "document_id": request.document_id,
-        "filename": os.path.basename(file_path),
-        "document_type": document_type,
-        "summary": summary,
-        "risk_score": risk_score,
-        "risk_factors": risk_factors,
-        "clauses": analyzed_clauses,
-        "questions": questions
+    clauses_data = (
+        supabase.table("clauses")
+        .select("*")
+        .eq("analysis_id", analysis_id)
+        .order("sort_order")
+        .execute()
+    ).data
+
+    risk_factors_data = (
+        supabase.table("risk_factors")
+        .select("factor_text")
+        .eq("analysis_id", analysis_id)
+        .execute()
+    ).data
+
+    questions_data = (
+        supabase.table("questions")
+        .select("*")
+        .eq("analysis_id", analysis_id)
+        .execute()
+    ).data
+
+    analysis_dict = {
+        "document_id": request.contract_id,
+        "filename": contract_data["original_file_name"],
+        "document_type": analysis_data.get("document_type", contract_data.get("document_type", "Other")),
+        "summary": analysis_data["summary"],
+        "risk_score": analysis_data["risk_score"],
+        "risk_factors": [r["factor_text"] for r in risk_factors_data],
+        "clauses": [
+            {
+                "title": c["title"],
+                "simple_explanation": c["simple_explanation"],
+                "risk_level": c["risk_level"],
+                "risk_reason": c["risk_reason"],
+            }
+            for c in clauses_data
+        ],
+        "questions": [{"question": q["question_text"]} for q in questions_data],
     }
 
-    report_path = generate_pdf_report(os.path.basename(file_path), analysis)
-
-    if not os.path.exists(report_path):
+    try:
+        pdf_bytes = generate_pdf_report(contract_data["original_file_name"], analysis_dict)
+    except Exception as e:
+        logger.error(f"PDF generation failed: {e}")
         raise HTTPException(status_code=500, detail="Failed to generate report")
 
-    return FileResponse(
-        report_path,
+    safe_name = contract_data["original_file_name"].replace(" ", "_").replace(".pdf", "")
+    download_filename = f"contract_analysis_{safe_name}.pdf"
+
+    return Response(
+        content=pdf_bytes,
         media_type="application/pdf",
-        filename=f"contract_analysis_{request.document_id}.pdf"
+        headers={"Content-Disposition": f'attachment; filename="{download_filename}"'},
     )

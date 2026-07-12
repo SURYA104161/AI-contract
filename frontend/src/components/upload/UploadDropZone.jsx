@@ -2,7 +2,9 @@ import { useRef, useState } from "react";
 import { FiUploadCloud } from "react-icons/fi";
 import { useNavigate } from "react-router-dom";
 import { useAuthContext } from "../../context/AuthContext";
+import { supabase } from "../../supabase/supabaseClient";
 import { uploadContract } from "../../services/contractService";
+import { inspectToken } from "../../services/api";
 import FilePreview from "./FilePreview";
 import UploadProgress from "./UploadProgress";
 
@@ -45,20 +47,46 @@ const UploadDropZone = () => {
   const startUpload = async () => {
     try {
       setStep("uploading");
+      setProgress(10);
+      setStatus("Verifying session...");
+
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        alert("Your session has expired. Please log in again.");
+        setStep("selected");
+        return;
+      }
+
+      // Diagnostic: log token info before upload
+      try {
+        const info = await inspectToken();
+        console.log("Pre-upload token diagnostic:", info);
+      } catch (diagErr) {
+        console.warn("Inspect endpoint failed:", diagErr.message);
+      }
+
       setProgress(20);
       setStatus("Uploading PDF...");
 
-      await uploadContract(selectedFile, user.id);
+      const result = await uploadContract(selectedFile, user.id);
+
+      setProgress(60);
+      setStatus("Extracting text...");
+
+      await new Promise((r) => setTimeout(r, 500));
 
       setProgress(100);
-      setStatus("Upload Completed");
+      setStatus("Upload completed! Analysis starting...");
 
       setTimeout(() => {
-        navigate("/analysis");
+        navigate("/analysis", {
+          state: { contractId: result.contract_id, filename: result.filename },
+        });
       }, 700);
     } catch (err) {
-      console.error(err);
-      alert(err.message);
+      console.error("Upload error:", err);
+      const msg = err.response?.data?.detail || err.message || "Upload failed";
+      alert(msg);
       setStep("selected");
     }
   };
@@ -83,7 +111,7 @@ const UploadDropZone = () => {
           <input ref={fileInputRef} type="file" accept=".pdf" hidden onChange={handleFileChange} />
 
           <p className="mt-6 text-sm text-slate-500">
-            Supported format: PDF • Maximum size: 20 MB
+            Supported format: PDF - Maximum size: 20 MB
           </p>
         </div>
       )}

@@ -1,8 +1,9 @@
-from pydantic import BaseModel
-from typing import Optional
+from pydantic import BaseModel, Field
+
 
 class AnalysisRequest(BaseModel):
-    document_id: str
+    contract_id: str = Field(..., min_length=1, description="Contract UUID")
+
 
 class Clause(BaseModel):
     title: str
@@ -11,12 +12,14 @@ class Clause(BaseModel):
     risk_level: str
     risk_reason: str
 
+
 class Question(BaseModel):
     question: str
-    context: str
+    context: str = ""
+
 
 class AnalysisResponse(BaseModel):
-    document_id: str
+    contract_id: str
     filename: str
     document_type: str
     summary: str
@@ -24,3 +27,14 @@ class AnalysisResponse(BaseModel):
     risk_score: int
     risk_factors: list[str]
     questions: list[Question]
+    status: str
+    created_at: str | None = None
+
+
+class ChatRequest(BaseModel):
+    contract_id: str = Field(..., min_length=1)
+    question: str = Field(..., min_length=1, max_length=2000)
+
+
+class ChatResponse(BaseModel):
+    answer: str

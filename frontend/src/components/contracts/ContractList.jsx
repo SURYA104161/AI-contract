@@ -1,60 +1,42 @@
 import { useCallback, useEffect, useState } from "react";
-import { supabase } from "../../supabase/supabaseClient";
-import { useAuthContext } from "../../context/AuthContext";
+import { getContracts, deleteContract } from "../../services/api";
 import ContractCard from "./ContractCard";
 import EmptyContracts from "./EmptyContracts";
 
 const ContractList = () => {
-  const { user } = useAuthContext();
-
   const [contracts, setContracts] = useState([]);
   const [loading, setLoading] = useState(true);
 
   const fetchContracts = useCallback(async () => {
-    if (!user) return;
-
     setLoading(true);
-
-    const { data, error } = await supabase
-      .from("contracts")
-      .select("*")
-      .eq("user_id", user.id)
-      .order("uploaded_at", { ascending: false });
-
-    if (error) {
-      console.error(error);
-    } else {
+    try {
+      const data = await getContracts();
       setContracts(data);
+    } catch (err) {
+      console.error("Failed to fetch contracts:", err);
+    } finally {
+      setLoading(false);
     }
-
-    setLoading(false);
-  }, [user]);
+  }, []);
 
   useEffect(() => {
-    if (!user) return;
-
     fetchContracts();
-  }, [user, fetchContracts]);
+  }, [fetchContracts]);
 
-  const deleteContract = async (contract) => {
+  const handleDelete = async (contract) => {
     const confirmDelete = window.confirm(
       `Delete "${contract.original_file_name}"?`
     );
 
     if (!confirmDelete) return;
 
-    // Delete file from storage
-    await supabase.storage
-      .from("contracts")
-      .remove([contract.stored_file_name]);
-
-    // Delete row
-    await supabase
-      .from("contracts")
-      .delete()
-      .eq("id", contract.id);
-
-    fetchContracts();
+    try {
+      await deleteContract(contract.id);
+      fetchContracts();
+    } catch (err) {
+      console.error("Delete failed:", err);
+      alert("Failed to delete contract");
+    }
   };
 
   if (loading) {
@@ -75,7 +57,7 @@ const ContractList = () => {
         <ContractCard
           key={contract.id}
           contract={contract}
-          onDelete={deleteContract}
+          onDelete={handleDelete}
         />
       ))}
     </div>
