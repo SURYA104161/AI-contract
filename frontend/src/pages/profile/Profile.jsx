@@ -1,5 +1,6 @@
 import MainLayout from "../../components/layout/MainLayout";
 import ProfileCard from "../../components/profile/ProfileCard";
+import ProfileForm from "../../components/profile/ProfileForm";
 import AccountStats from "../../components/profile/AccountStats";
 import SecurityCard from "../../components/profile/SecurityCard";
 
@@ -14,6 +15,10 @@ const Profile = () => {
         </p>
 
         <ProfileCard />
+
+        <div className="mt-8">
+          <ProfileForm />
+        </div>
 
         <div className="mt-8">
           <AccountStats />

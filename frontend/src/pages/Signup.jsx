@@ -1,13 +1,11 @@
-import AuthLayout from "../components/AuthLayout";
-import RegisterForm from "../components/auth/RegisterForm";
+import SignupForm from "../components/auth/SignupForm";
 
-export default function Signup() {
+const Signup = () => {
   return (
-    <AuthLayout>
-      <div>
-        <h1 className="text-3xl font-bold text-white mb-4">Create an account</h1>
-        <RegisterForm />
-      </div>
-    </AuthLayout>
+    <div className="min-h-screen bg-slate-950 flex items-center justify-center p-6">
+      <SignupForm />
+    </div>
   );
-}
+};
+
+export default Signup;

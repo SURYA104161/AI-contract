@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
+import VerifyEmail from "./pages/auth/VerifyEmail";
 import ForgotPassword from "./pages/ForgotPassword";
 import Dashboard from "./pages/dashboard/Dashboard";
 import Upload from "./pages/upload/Upload";
@@ -10,6 +11,7 @@ import Contracts from "./pages/contracts/Contracts";
 import History from "./pages/history/History";
 import Reports from "./pages/reports/Reports";
 import Profile from "./pages/profile/Profile";
+import CompleteProfile from "./pages/profile/CompleteProfile";
 import Settings from "./pages/settings/Settings";
 import ProtectedRoute from "./components/ProtectedRoute";
 import { AuthProvider } from "./context/AuthContext";
@@ -21,6 +23,7 @@ function App() {
         <Routes>
           <Route path="/" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
+          <Route path="/verify-email" element={<VerifyEmail />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route
             path="/dashboard"
@@ -90,6 +93,15 @@ function App() {
             element={
               <ProtectedRoute>
                 <Profile />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/complete-profile"
+            element={
+              <ProtectedRoute>
+                <CompleteProfile />
               </ProtectedRoute>
             }
           />
