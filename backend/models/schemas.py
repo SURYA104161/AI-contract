@@ -3,6 +3,7 @@ from pydantic import BaseModel, Field
 
 class AnalysisRequest(BaseModel):
     contract_id: str = Field(..., min_length=1, description="Contract UUID")
+    language: str = Field(default="en", description="Output language: 'en' for English, 'ta' for Tamil")
 
 
 class Clause(BaseModel):
@@ -28,12 +29,14 @@ class AnalysisResponse(BaseModel):
     risk_factors: list[str]
     questions: list[Question]
     status: str
+    language: str = "en"
     created_at: str | None = None
 
 
 class ChatRequest(BaseModel):
     contract_id: str = Field(..., min_length=1)
     question: str = Field(..., min_length=1, max_length=2000)
+    language: str = Field(default="en", description="Response language: 'en' for English, 'ta' for Tamil")
 
 
 class ChatResponse(BaseModel):

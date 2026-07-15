@@ -45,13 +45,13 @@ export async function uploadDocument(file) {
   return response.data;
 }
 
-export async function analyzeDocument(contractId) {
-  const response = await api.post('/api/analyze', { contract_id: contractId });
+export async function analyzeDocument(contractId, language = 'en') {
+  const response = await api.post('/api/analyze', { contract_id: contractId, language });
   return response.data;
 }
 
-export async function downloadReport(contractId) {
-  const response = await api.post('/api/report', { contract_id: contractId }, {
+export async function downloadReport(contractId, language = 'en') {
+  const response = await api.post('/api/report', { contract_id: contractId, language }, {
     responseType: 'blob',
   });
   const url = window.URL.createObjectURL(new Blob([response.data]));
@@ -89,10 +89,11 @@ export async function getHistory() {
   return response.data.history;
 }
 
-export async function chatWithAI(contractId, question) {
+export async function chatWithAI(contractId, question, language = 'en') {
   const response = await api.post('/api/chat', {
     contract_id: contractId,
     question,
+    language,
   });
   return response.data;
 }

@@ -1,12 +1,12 @@
 import { supabase } from "../supabase/supabaseClient";
 import { uploadDocument, analyzeDocument } from "./api";
 
-export const uploadContract = async (file, userId) => {
+export const uploadContract = async (file, userId, language = "en") => {
   const uploadResult = await uploadDocument(file);
 
   const contractId = uploadResult.contract_id;
 
-  analyzeDocument(contractId).catch((err) => {
+  analyzeDocument(contractId, language).catch((err) => {
     console.error("Background analysis failed:", err);
   });
 

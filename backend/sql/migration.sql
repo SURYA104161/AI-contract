@@ -26,6 +26,10 @@ CREATE INDEX IF NOT EXISTS idx_analyses_contract ON analyses(contract_id);
 CREATE INDEX IF NOT EXISTS idx_analyses_user ON analyses(user_id);
 CREATE INDEX IF NOT EXISTS idx_analyses_status ON analyses(status);
 
+-- 2b. Add language column to analyses table
+ALTER TABLE analyses ADD COLUMN IF NOT EXISTS language text DEFAULT 'en';
+CREATE INDEX IF NOT EXISTS idx_analyses_language ON analyses(language);
+
 -- 3. Create clauses table
 CREATE TABLE IF NOT EXISTS clauses (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),

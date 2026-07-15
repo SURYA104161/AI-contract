@@ -45,6 +45,7 @@ async def download_report(
 
     analysis_data = analysis.data[0]
     analysis_id = analysis_data["id"]
+    language = analysis_data.get("language", "en")
 
     clauses_data = (
         supabase.table("clauses")
@@ -88,7 +89,7 @@ async def download_report(
     }
 
     try:
-        pdf_bytes = generate_pdf_report(contract_data["original_file_name"], analysis_dict)
+        pdf_bytes = generate_pdf_report(contract_data["original_file_name"], analysis_dict, language=language)
     except Exception as e:
         logger.error(f"PDF generation failed: {e}")
         raise HTTPException(status_code=500, detail="Failed to generate report")
