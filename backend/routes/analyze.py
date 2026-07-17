@@ -15,6 +15,8 @@ async def analyze_document(
     request: AnalysisRequest,
     user_id: str = Depends(get_current_user),
 ):
+    language = request.language if request.language in ("en", "ta") else "en"
+
     contract = (
         supabase.table("contracts")
         .select("*")
@@ -41,56 +43,62 @@ async def analyze_document(
 
     if existing.data:
         analysis = existing.data[0]
-        analysis_id = analysis["id"]
+        cached_language = analysis.get("language", "en")
 
-        clauses_data = (
-            supabase.table("clauses")
-            .select("*")
-            .eq("analysis_id", analysis_id)
-            .order("sort_order")
-            .execute()
-        ).data
+        if cached_language == language:
+            analysis_id = analysis["id"]
 
-        risk_factors_data = (
-            supabase.table("risk_factors")
-            .select("factor_text")
-            .eq("analysis_id", analysis_id)
-            .execute()
-        ).data
+            clauses_data = (
+                supabase.table("clauses")
+                .select("*")
+                .eq("analysis_id", analysis_id)
+                .order("sort_order")
+                .execute()
+            ).data
 
-        questions_data = (
-            supabase.table("questions")
-            .select("*")
-            .eq("analysis_id", analysis_id)
-            .execute()
-        ).data
+            risk_factors_data = (
+                supabase.table("risk_factors")
+                .select("factor_text")
+                .eq("analysis_id", analysis_id)
+                .execute()
+            ).data
 
-        logger.info(f"Serving cached analysis {analysis_id} for contract {request.contract_id}")
+            questions_data = (
+                supabase.table("questions")
+                .select("*")
+                .eq("analysis_id", analysis_id)
+                .execute()
+            ).data
 
-        return AnalysisResponse(
-            contract_id=request.contract_id,
-            filename=contract_data["original_file_name"],
-            document_type=analysis.get("document_type", contract_data.get("document_type", "Other")),
-            summary=analysis["summary"],
-            clauses=[
-                Clause(
-                    title=c["title"],
-                    original_text=c["original_text"],
-                    simple_explanation=c["simple_explanation"],
-                    risk_level=c["risk_level"],
-                    risk_reason=c["risk_reason"],
-                )
-                for c in clauses_data
-            ],
-            risk_score=analysis["risk_score"],
-            risk_factors=[r["factor_text"] for r in risk_factors_data],
-            questions=[
-                Question(question=q["question_text"], context=q.get("context", ""))
-                for q in questions_data
-            ],
-            status="completed",
-            created_at=analysis.get("created_at"),
-        )
+            logger.info(f"Serving cached analysis {analysis_id} for contract {request.contract_id} (lang={language})")
+
+            return AnalysisResponse(
+                contract_id=request.contract_id,
+                filename=contract_data["original_file_name"],
+                document_type=analysis.get("document_type", contract_data.get("document_type", "Other")),
+                summary=analysis["summary"],
+                clauses=[
+                    Clause(
+                        title=c["title"],
+                        original_text=c["original_text"],
+                        simple_explanation=c["simple_explanation"],
+                        risk_level=c["risk_level"],
+                        risk_reason=c["risk_reason"],
+                    )
+                    for c in clauses_data
+                ],
+                risk_score=analysis["risk_score"],
+                risk_factors=[r["factor_text"] for r in risk_factors_data],
+                questions=[
+                    Question(question=q["question_text"], context=q.get("context", ""))
+                    for q in questions_data
+                ],
+                status="completed",
+                language=language,
+                created_at=analysis.get("created_at"),
+            )
+        else:
+            logger.info(f"Cache miss: requested lang={language}, cached lang={cached_language}. Running new analysis.")
 
     file_url = contract_data.get("file_url", "")
     extracted_text = contract_data.get("extracted_text", "")
@@ -106,6 +114,7 @@ async def analyze_document(
             user_id=user_id,
             file_url=file_url,
             extracted_text=extracted_text,
+            language=language,
         )
     except Exception as e:
         mark_analysis_failed(request.contract_id, user_id, str(e))
@@ -142,5 +151,6 @@ async def analyze_document(
             for q in questions_data
         ],
         status="completed",
+        language=language,
         created_at=analysis_row.get("created_at"),
     )

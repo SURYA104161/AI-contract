@@ -12,15 +12,23 @@ import SafeClauses from "../../components/analysis/SafeClauses";
 import QuestionsSection from "../../components/analysis/QuestionsSection";
 import InsightsPanel from "../../components/analysis/InsightsPanel";
 import WaitingAnalysis from "../../components/analysis/WaitingAnalysis";
+import LanguageSelector from "../../components/LanguageSelector";
 
 const Analysis = () => {
   const [activeSection, setActiveSection] = useState("summary");
   const [status, setStatus] = useState("waiting");
   const [analysisData, setAnalysisData] = useState(null);
   const [error, setError] = useState(null);
+  const [language, setLanguage] = useState("en");
   const location = useLocation();
   const contractId = location.state?.contractId;
   const filename = location.state?.filename;
+
+  useEffect(() => {
+    if (location.state?.language) {
+      setLanguage(location.state.language);
+    }
+  }, [location.state?.language]);
 
   useEffect(() => {
     if (!contractId) {
@@ -33,7 +41,7 @@ const Analysis = () => {
     const runAnalysis = async () => {
       try {
         setStatus("analyzing");
-        const data = await analyzeDocument(contractId);
+        const data = await analyzeDocument(contractId, language);
         if (!cancelled) {
           setAnalysisData(data);
           setStatus("completed");
@@ -50,20 +58,26 @@ const Analysis = () => {
     runAnalysis();
 
     return () => { cancelled = true; };
-  }, [contractId]);
+  }, [contractId, language]);
 
   const retryAnalysis = async () => {
     if (!contractId) return;
     setError(null);
     setStatus("analyzing");
     try {
-      const data = await analyzeDocument(contractId);
+      const data = await analyzeDocument(contractId, language);
       setAnalysisData(data);
       setStatus("completed");
     } catch (err) {
       setError(err.response?.data?.detail || "Analysis failed. Please try again.");
       setStatus("failed");
     }
+  };
+
+  const reAnalyze = () => {
+    setAnalysisData(null);
+    setError(null);
+    setStatus("waiting");
   };
 
   return (
@@ -74,6 +88,10 @@ const Analysis = () => {
         <p className="text-slate-400 mt-2">
           AI-generated legal insights for your uploaded document.
         </p>
+
+        <div className="mt-6">
+          <LanguageSelector value={language} onChange={setLanguage} compact />
+        </div>
 
         <div className="mt-8">
           {!contractId && (
@@ -100,7 +118,15 @@ const Analysis = () => {
 
           {status === "completed" && analysisData && (
             <>
-              <AnalysisHeader contract={analysisData} filename={filename} />
+              <div className="flex items-center justify-between">
+                <AnalysisHeader contract={analysisData} filename={filename} />
+                <button
+                  onClick={reAnalyze}
+                  className="ml-4 bg-slate-800 hover:bg-slate-700 text-slate-300 px-4 py-2 rounded-xl text-sm border border-slate-700"
+                >
+                  Re-analyze
+                </button>
+              </div>
 
               <OverviewCards
                 onSelect={setActiveSection}

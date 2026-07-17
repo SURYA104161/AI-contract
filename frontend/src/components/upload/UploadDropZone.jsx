@@ -7,6 +7,7 @@ import { uploadContract } from "../../services/contractService";
 import { inspectToken } from "../../services/api";
 import FilePreview from "./FilePreview";
 import UploadProgress from "./UploadProgress";
+import LanguageSelector from "../LanguageSelector";
 
 const UploadDropZone = () => {
   const fileInputRef = useRef(null);
@@ -17,6 +18,7 @@ const UploadDropZone = () => {
   const [selectedFile, setSelectedFile] = useState(null);
   const [progress, setProgress] = useState(0);
   const [status, setStatus] = useState("");
+  const [language, setLanguage] = useState("en");
 
   const handleBrowse = () => {
     fileInputRef.current.click();
@@ -57,7 +59,6 @@ const UploadDropZone = () => {
         return;
       }
 
-      // Diagnostic: log token info before upload
       try {
         const info = await inspectToken();
         console.log("Pre-upload token diagnostic:", info);
@@ -68,7 +69,7 @@ const UploadDropZone = () => {
       setProgress(20);
       setStatus("Uploading PDF...");
 
-      const result = await uploadContract(selectedFile, user.id);
+      const result = await uploadContract(selectedFile, user.id, language);
 
       setProgress(60);
       setStatus("Extracting text...");
@@ -80,7 +81,7 @@ const UploadDropZone = () => {
 
       setTimeout(() => {
         navigate("/analysis", {
-          state: { contractId: result.contract_id, filename: result.filename },
+          state: { contractId: result.contract_id, filename: result.filename, language },
         });
       }, 700);
     } catch (err) {
@@ -119,6 +120,10 @@ const UploadDropZone = () => {
       {step === "selected" && (
         <>
           <FilePreview file={selectedFile} onRemove={removeFile} />
+
+          <div className="mt-5">
+            <LanguageSelector value={language} onChange={setLanguage} />
+          </div>
 
           <button
             onClick={startUpload}

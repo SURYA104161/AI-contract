@@ -15,6 +15,8 @@ async def chat(
     request: ChatRequest,
     user_id: str = Depends(get_current_user),
 ):
+    language = request.language if request.language in ("en", "ta") else "en"
+
     contract = (
         supabase.table("contracts")
         .select("*")
@@ -40,6 +42,7 @@ async def chat(
         question=request.question,
         contract_context=context,
         document_type=document_type,
+        language=language,
     )
 
     return ChatResponse(answer=answer)

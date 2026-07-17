@@ -9,7 +9,7 @@ from services.logger import get_logger
 logger = get_logger("analysis_service")
 
 
-async def analyze_single_clause(clause: dict, document_type: str) -> dict:
+async def analyze_single_clause(clause: dict, document_type: str, language: str = "en") -> dict:
     loop = asyncio.get_event_loop()
     result = await loop.run_in_executor(
         None,
@@ -17,6 +17,7 @@ async def analyze_single_clause(clause: dict, document_type: str) -> dict:
         clause["title"],
         clause["context"],
         document_type,
+        language,
     )
     return {
         "title": clause["title"],
@@ -27,7 +28,7 @@ async def analyze_single_clause(clause: dict, document_type: str) -> dict:
     }
 
 
-async def run_full_analysis(contract_id: str, user_id: str, file_url: str, extracted_text: str) -> str:
+async def run_full_analysis(contract_id: str, user_id: str, file_url: str, extracted_text: str, language: str = "en") -> str:
     loop = asyncio.get_event_loop()
 
     document_type = await loop.run_in_executor(None, classify_document, extracted_text)
@@ -37,17 +38,17 @@ async def run_full_analysis(contract_id: str, user_id: str, file_url: str, extra
         raw_clauses = [{"title": "General", "context": extracted_text[:1000]}]
 
     analyzed_clauses = await asyncio.gather(
-        *[analyze_single_clause(c, document_type) for c in raw_clauses]
+        *[analyze_single_clause(c, document_type, language) for c in raw_clauses]
     )
     analyzed_clauses = list(analyzed_clauses)
 
     summary = await loop.run_in_executor(
-        None, generate_summary, document_type, analyzed_clauses
+        None, generate_summary, document_type, analyzed_clauses, language
     )
     risk_score = calculate_risk_score(analyzed_clauses)
     risk_factors = identify_risk_factors(analyzed_clauses, extracted_text)
     questions = await loop.run_in_executor(
-        None, generate_questions, document_type, analyzed_clauses
+        None, generate_questions, document_type, analyzed_clauses, language
     )
 
     analysis_insert = supabase.table("analyses").insert({
@@ -56,6 +57,7 @@ async def run_full_analysis(contract_id: str, user_id: str, file_url: str, extra
         "summary": summary,
         "risk_score": risk_score,
         "document_type": document_type,
+        "language": language,
         "status": "completed",
     }).execute()
 
@@ -88,7 +90,7 @@ async def run_full_analysis(contract_id: str, user_id: str, file_url: str, extra
 
     supabase.table("contracts").update({"document_type": document_type}).eq("id", contract_id).execute()
 
-    logger.info(f"Analysis completed for contract {contract_id}: analysis_id={analysis_id}, risk_score={risk_score}")
+    logger.info(f"Analysis completed for contract {contract_id}: analysis_id={analysis_id}, risk_score={risk_score}, language={language}")
     return analysis_id
 
 

@@ -5,6 +5,7 @@ import ChatHeader from "../../components/chat/ChatHeader";
 import SuggestedQuestions from "../../components/chat/SuggestedQuestions";
 import ChatMessages from "../../components/chat/ChatMessages";
 import ChatInput from "../../components/chat/ChatInput";
+import LanguageSelector from "../../components/LanguageSelector";
 import { chatWithAI, getContracts } from "../../services/api";
 import { useAuthContext } from "../../context/AuthContext";
 
@@ -22,6 +23,7 @@ const AIChat = () => {
     },
   ]);
   const [loading, setLoading] = useState(false);
+  const [language, setLanguage] = useState("en");
 
   useEffect(() => {
     if (!user) return;
@@ -43,7 +45,7 @@ const AIChat = () => {
     setLoading(true);
 
     try {
-      const response = await chatWithAI(selectedContractId, text);
+      const response = await chatWithAI(selectedContractId, text, language);
       setMessages((prev) => [...prev, { sender: "ai", text: response.answer }]);
     } catch (err) {
       setMessages((prev) => [
@@ -63,6 +65,10 @@ const AIChat = () => {
     <MainLayout>
       <div className="max-w-6xl mx-auto h-[calc(100vh-130px)] flex flex-col">
         <ChatHeader />
+
+        <div className="mb-4">
+          <LanguageSelector value={language} onChange={setLanguage} compact />
+        </div>
 
         {contracts.length > 0 && !selectedContractId && (
           <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 mb-5">
